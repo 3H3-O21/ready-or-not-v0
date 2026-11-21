@@ -293,9 +293,20 @@ nextZ += right.z * speed;
 
 }
 
-if(!checkCollision(nextX,nextZ)){
+if(!checkCollision(
+nextX,
+camera.position.z
+)){
 
 camera.position.x = nextX;
+
+}
+
+if(!checkCollision(
+camera.position.x,
+nextZ
+)){
+
 camera.position.z = nextZ;
 
 }
