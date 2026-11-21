@@ -110,6 +110,7 @@ new THREE.MeshStandardMaterial({
 color:0xbbbbbb
 });
 
+const walls = [];
 function createWall(x,z,w,d){
 
 const wall =
@@ -126,6 +127,13 @@ z
 
 scene.add(wall);
 
+const box =
+new THREE.Box3().setFromObject(
+wall
+);
+
+walls.push(box);
+
 }
 
 createWall(0,-15,30,1);
@@ -134,6 +142,7 @@ createWall(-15,0,1,30);
 createWall(15,0,1,30);
 
 const keys = {};
+const PLAYER_RADIUS = 0.5;
 
 document.addEventListener(
 "keydown",
@@ -199,7 +208,35 @@ camera.rotation.x = pitch;
 
 }
 );
+function checkCollision(x,z){
 
+for(const wall of walls){
+
+const playerBox =
+new THREE.Box3(
+new THREE.Vector3(
+x - PLAYER_RADIUS,
+0,
+z - PLAYER_RADIUS
+),
+new THREE.Vector3(
+x + PLAYER_RADIUS,
+2,
+z + PLAYER_RADIUS
+)
+);
+
+if(playerBox.intersectsBox(wall)){
+
+return true;
+
+}
+
+}
+
+return false;
+
+}
 function animate(){
 
 requestAnimationFrame(
@@ -207,6 +244,8 @@ animate
 );
 
 const speed = 0.1;
+let nextX = camera.position.x;
+let nextZ = camera.position.z;
 
 const direction =
 new THREE.Vector3();
@@ -228,37 +267,36 @@ new THREE.Vector3(0,1,0)
 
 if(keys["w"]){
 
-camera.position.add(
-direction.clone()
-.multiplyScalar(speed)
-);
+nextX += direction.x * speed;
+nextZ += direction.z * speed;
 
 }
 
 if(keys["s"]){
 
-camera.position.add(
-direction.clone()
-.multiplyScalar(-speed)
-);
+nextX -= direction.x * speed;
+nextZ -= direction.z * speed;
 
 }
 
 if(keys["a"]){
 
-camera.position.add(
-right.clone()
-.multiplyScalar(-speed)
-);
+nextX -= right.x * speed;
+nextZ -= right.z * speed;
 
 }
 
 if(keys["d"]){
 
-camera.position.add(
-right.clone()
-.multiplyScalar(speed)
-);
+nextX += right.x * speed;
+nextZ += right.z * speed;
+
+}
+
+if(!checkCollision(nextX,nextZ)){
+
+camera.position.x = nextX;
+camera.position.z = nextZ;
 
 }
 
