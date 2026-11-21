@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Carte 3D Test</title>
+<title>FPS Test</title>
 
 <style>
 
@@ -18,11 +18,30 @@ canvas{
     display:block;
 }
 
+#startScreen{
+    position:absolute;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.8);
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    color:white;
+    font-size:30px;
+    cursor:pointer;
+}
+
 </style>
 
 </head>
 
 <body>
+
+<div id="startScreen">
+Clique pour commencer
+</div>
 
 <script type="module">
 
@@ -30,18 +49,25 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.m
 
 const scene = new THREE.Scene();
 
-scene.background = new THREE.Color(0x555555);
+scene.background =
+new THREE.Color(0x555555);
 
-const camera = new THREE.PerspectiveCamera(
+const camera =
+new THREE.PerspectiveCamera(
 75,
 window.innerWidth/window.innerHeight,
 0.1,
 1000
 );
 
-camera.position.set(0,5,15);
+camera.position.set(
+0,
+1.8,
+10
+);
 
-const renderer = new THREE.WebGLRenderer();
+const renderer =
+new THREE.WebGLRenderer();
 
 renderer.setSize(
 window.innerWidth,
@@ -52,7 +78,8 @@ document.body.appendChild(
 renderer.domElement
 );
 
-const light = new THREE.DirectionalLight(
+const light =
+new THREE.DirectionalLight(
 0xffffff,
 3
 );
@@ -65,21 +92,12 @@ light.position.set(
 
 scene.add(light);
 
-const floorGeometry =
-new THREE.PlaneGeometry(
-30,
-30
-);
-
-const floorMaterial =
-new THREE.MeshStandardMaterial({
-color:0x808080
-});
-
 const floor =
 new THREE.Mesh(
-floorGeometry,
-floorMaterial
+new THREE.PlaneGeometry(30,30),
+new THREE.MeshStandardMaterial({
+color:0x808080
+})
 );
 
 floor.rotation.x =
@@ -94,16 +112,9 @@ color:0xbbbbbb
 
 function createWall(x,z,w,d){
 
-const wallGeometry =
-new THREE.BoxGeometry(
-w,
-4,
-d
-);
-
 const wall =
 new THREE.Mesh(
-wallGeometry,
+new THREE.BoxGeometry(w,4,d),
 wallMaterial
 );
 
@@ -122,11 +133,134 @@ createWall(0,15,30,1);
 createWall(-15,0,1,30);
 createWall(15,0,1,30);
 
+const keys = {};
+
+document.addEventListener(
+"keydown",
+(e)=>{
+keys[e.key.toLowerCase()] = true;
+}
+);
+
+document.addEventListener(
+"keyup",
+(e)=>{
+keys[e.key.toLowerCase()] = false;
+}
+);
+
+let yaw = 0;
+let pitch = 0;
+
+document
+.getElementById("startScreen")
+.addEventListener(
+"click",
+()=>{
+
+document.body
+.requestPointerLock();
+
+document
+.getElementById("startScreen")
+.style.display="none";
+
+}
+);
+
+document.addEventListener(
+"mousemove",
+(e)=>{
+
+if(
+document.pointerLockElement
+=== document.body
+){
+
+yaw -= e.movementX * 0.002;
+
+pitch -= e.movementY * 0.002;
+
+pitch = Math.max(
+-Math.PI/2,
+Math.min(
+Math.PI/2,
+pitch
+)
+);
+
+camera.rotation.order =
+"YXZ";
+
+camera.rotation.y = yaw;
+camera.rotation.x = pitch;
+
+}
+
+}
+);
+
 function animate(){
 
 requestAnimationFrame(
 animate
 );
+
+const speed = 0.1;
+
+const direction =
+new THREE.Vector3();
+
+camera.getWorldDirection(
+direction
+);
+
+direction.y = 0;
+direction.normalize();
+
+const right =
+new THREE.Vector3();
+
+right.crossVectors(
+direction,
+new THREE.Vector3(0,1,0)
+);
+
+if(keys["w"]){
+
+camera.position.add(
+direction.clone()
+.multiplyScalar(speed)
+);
+
+}
+
+if(keys["s"]){
+
+camera.position.add(
+direction.clone()
+.multiplyScalar(-speed)
+);
+
+}
+
+if(keys["a"]){
+
+camera.position.add(
+right.clone()
+.multiplyScalar(speed)
+);
+
+}
+
+if(keys["d"]){
+
+camera.position.add(
+right.clone()
+.multiplyScalar(-speed)
+);
+
+}
 
 renderer.render(
 scene,
