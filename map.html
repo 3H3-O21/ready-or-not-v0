@@ -147,20 +147,59 @@ const PLAYER_RADIUS = 0.5;
 document.addEventListener(
 "keydown",
 (e)=>{
-keys[e.key.toLowerCase()] = true;
+const key = e.key.toLowerCase();
+
+keys[key] = true;
+
+if(key === "control"){
+isCrouching = true;
+}
+
+if(key === "q"){
+leanDirection = -1;
+}
+
+if(key === "e"){
+leanDirection = 1;
+}
 }
 );
 
 document.addEventListener(
 "keyup",
 (e)=>{
-keys[e.key.toLowerCase()] = false;
+const key = e.key.toLowerCase();
+
+keys[key] = false;
+
+if(key === "control"){
+isCrouching = false;
+}
+
+if(key === "q" && leanDirection === -1){
+leanDirection = 0;
+}
+
+if(key === "e" && leanDirection === 1){
+leanDirection = 0;
+}
 }
 );
 
 let yaw = 0;
 let pitch = 0;
 
+let isCrouching = false;
+let leanDirection = 0;
+
+const WALK_SPEED = 0.06;
+const RUN_SPEED = 0.10;
+
+const STAND_HEIGHT = 1.8;
+const CROUCH_HEIGHT = 1.1;
+
+const LEAN_AMOUNT = 0.3;
+const LEAN_ANGLE = 0.15;
 document
 .getElementById("startScreen")
 .addEventListener(
@@ -243,7 +282,10 @@ requestAnimationFrame(
 animate
 );
 
-const speed = 0.1;
+const speed =
+keys["shift"]
+? RUN_SPEED
+: WALK_SPEED;
 let nextX = camera.position.x;
 let nextZ = camera.position.z;
 
@@ -310,6 +352,28 @@ nextZ
 camera.position.z = nextZ;
 
 }
+const targetHeight =
+isCrouching
+? CROUCH_HEIGHT
+: STAND_HEIGHT;
+
+camera.position.y +=
+(targetHeight - camera.position.y)
+* 0.15;
+
+camera.position.x +=
+(
+leanDirection * LEAN_AMOUNT
+-
+(
+camera.position.x -
+Math.round(camera.position.x)
+)
+)
+* 0.05;
+
+camera.rotation.z =
+leanDirection * LEAN_ANGLE;
 
 renderer.render(
 scene,
