@@ -32,6 +32,7 @@ canvas{
     font-size:30px;
     cursor:pointer;
 }
+
 #crosshair{
     position:absolute;
 
@@ -44,13 +45,13 @@ canvas{
     top:50%;
     left:50%;
 
-    transform:
-    translate(-50%,-50%);
+    transform:translate(-50%,-50%);
 
     pointer-events:none;
 
     z-index:1000;
 }
+
 #interactionText{
     position:absolute;
 
@@ -74,7 +75,6 @@ canvas{
     display:none;
 }
 
-
 </style>
 
 </head>
@@ -86,6 +86,7 @@ Clique pour commencer
 </div>
 <div id="crosshair"></div>
 <div id="interactionText"></div>
+
 <script type="importmap">
 {
   "imports": {
@@ -94,6 +95,7 @@ Clique pour commencer
   }
 }
 </script>
+
 <script type="module">
 
 import * as THREE from "three";
@@ -101,68 +103,55 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const scene = new THREE.Scene();
 const raycaster = new THREE.Raycaster();
-const centerScreen =
-new THREE.Vector2(0,0);
+const centerScreen = new THREE.Vector2(0,0);
 
-scene.background =
-new THREE.Color(0x555555);
+scene.background = new THREE.Color(0x555555);
 
-const camera =
-new THREE.PerspectiveCamera(
+const camera = new THREE.PerspectiveCamera(
 75,
 window.innerWidth/window.innerHeight,
 0.1,
 1000
 );
 
-camera.position.set(
-0,
-1.8,
-10
-);
+camera.position.set(0,1.8,10);
 
-const renderer =
-new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer();
 
 renderer.setSize(
 window.innerWidth,
 window.innerHeight
 );
 
-document.body.appendChild(
-renderer.domElement
-);
+document.body.appendChild(renderer.domElement);
 
-const light =
-new THREE.DirectionalLight(
-0xffffff,
-3
-);
-
-light.position.set(
-10,
-20,
-10
-);
-
+// ---------- LUMIERES ----------
+const light = new THREE.DirectionalLight(0xffffff,3);
+light.position.set(10,20,10);
 scene.add(light);
 
-const floor =
-new THREE.Mesh(
-new THREE.PlaneGeometry(30,30),
-new THREE.MeshStandardMaterial({
-color:0x808080
-})
+// lumière ambiante pour que l'intérieur ne soit pas noir
+scene.add(new THREE.AmbientLight(0xffffff,1.2));
+
+// ---------- SOL ----------
+const floor = new THREE.Mesh(
+new THREE.PlaneGeometry(200,200),
+new THREE.MeshStandardMaterial({ color:0x808080 })
 );
 
-floor.rotation.x =
--Math.PI/2;
-
+floor.rotation.x = -Math.PI/2;
 scene.add(floor);
+
+// surfaces sur lesquelles on peut marcher (sol + maison + escaliers)
+const groundMeshes = [floor];
+
+// ---------- MAISON (avec collisions) ----------
 let house = null;
 
-const loader =
-new GLTFLoader();
+// tous les meshes de la maison qui bloquent le joueur
+const collisionMeshes = [];
+
+const loader = new GLTFLoader();
 
 loader.load(
 
@@ -170,100 +159,86 @@ loader.load(
 
 function(gltf){
 
-house =
-gltf.scene;
+house = gltf.scene;
 
-house.position.set(
-0,
-0,
-0
-);
-
-house.scale.set(
-100,
-100,
-100
-);
+house.position.set(0,0,0);
+house.scale.set(100,100,100);
 
 scene.add(house);
-console.log(
-"Nb enfants :",
-house.children.length
-);
 
-console.log(
-"Maison GLB chargée"
-);
+// la matrice doit être à jour AVANT les collisions
+house.updateMatrixWorld(true);
+
+house.traverse((obj)=>{
+
+if(obj.isMesh){
+
+// SketchUp exporte souvent des faces à un seul côté :
+// DoubleSide permet de les détecter des deux côtés
+if(Array.isArray(obj.material)){
+obj.material.forEach(m => m.side = THREE.DoubleSide);
+}else{
+obj.material.side = THREE.DoubleSide;
+}
+
+collisionMeshes.push(obj);
+groundMeshes.push(obj);
+
+}
+
+});
+
+const box = new THREE.Box3().setFromObject(house);
+
+console.log("Maison GLB chargée");
+console.log("Meshes de collision :", collisionMeshes.length);
+console.log("Taille :", box.getSize(new THREE.Vector3()));
+console.log("Centre :", box.getCenter(new THREE.Vector3()));
 
 },
 
 undefined,
 
 function(error){
-
-console.error(
-"Erreur GLB :",
-error
-);
-
+console.error("Erreur GLB :", error);
 }
 
 );
-const walls = [];
+
+// ---------- PORTE DE TEST ----------
 const interactables = [];
 
-const doorMaterial =
-new THREE.MeshStandardMaterial({
-color:0x663300
-});
+const doorMaterial = new THREE.MeshStandardMaterial({ color:0x663300 });
 
-const door =
-new THREE.Mesh(
-new THREE.BoxGeometry(
-1,
-3,
-0.15
-),
+const door = new THREE.Mesh(
+new THREE.BoxGeometry(1,3,0.15),
 doorMaterial
 );
 
-door.position.set(
-0,
-1.5,
--15
-);
-
-door.userData.type =
-"door";
+door.position.set(0,1.5,-15);
+door.userData.type = "door";
 
 scene.add(door);
-
 interactables.push(door);
 
-
+// ---------- ETAT DU JOUEUR ----------
 const keys = {};
 const PLAYER_RADIUS = 0.5;
 let doorOpen = false;
 let targetDoorRotation = 0;
 let lookingAtDoor = false;
 
-document.addEventListener(
-"keydown",
-(e)=>{
+document.addEventListener("keydown",(e)=>{
+
 const key = e.key.toLowerCase();
 
 keys[key] = true;
-if(
-key === "f" &&
-lookingAtDoor
-){
-doorOpen = !doorOpen;
 
-targetDoorRotation =
-doorOpen
-? -Math.PI/2
-: 0;
+if(key === "f" && lookingAtDoor){
+doorOpen = !doorOpen;
+targetDoorRotation = doorOpen ? -Math.PI/2 : 0;
 }
+
 if(key === "control"){
 isCrouching = true;
 }
@@ -275,12 +250,11 @@ leanDirection = 1;
 if(key === "e"){
 leanDirection = -1;
 }
-}
-);
 
-document.addEventListener(
-"keyup",
-(e)=>{
+});
+
+document.addEventListener("keyup",(e)=>{
+
 const key = e.key.toLowerCase();
 
 keys[key] = false;
@@ -296,15 +270,14 @@ leanDirection = 0;
 if(key === "e"){
 leanDirection = 0;
 }
-}
-);
+
+});
 
 let yaw = 0;
 let pitch = 0;
 
 let isCrouching = false;
 let leanDirection = 0;
-let leanOffset = 0;
 
 const WALK_SPEED = 0.06;
 const RUN_SPEED = 0.10;
@@ -312,76 +285,100 @@ const RUN_SPEED = 0.10;
 const STAND_HEIGHT = 1.8;
 const CROUCH_HEIGHT = 1.1;
 
-const LEAN_AMOUNT = 0.3;
+// position des pieds et vitesse verticale (gravité)
+let feetY = 0;
+let velY = 0;
+let eyeOffset = STAND_HEIGHT;
+
+// hauteur maximale d'une marche qu'on peut monter (en mètres)
+const STEP_HEIGHT = 0.5;
+const GRAVITY = 0.01;
+
 const LEAN_ANGLE = 0.15;
-document
-.getElementById("startScreen")
-.addEventListener(
-"click",
-()=>{
-
-document.body
-.requestPointerLock();
 
 document
 .getElementById("startScreen")
-.style.display="none";
+.addEventListener("click",()=>{
 
-}
-);
+document.body.requestPointerLock();
 
-document.addEventListener(
-"mousemove",
-(e)=>{
+document.getElementById("startScreen").style.display = "none";
 
-if(
-document.pointerLockElement
-=== document.body
-){
+});
+
+document.addEventListener("mousemove",(e)=>{
+
+if(document.pointerLockElement === document.body){
 
 yaw -= e.movementX * 0.002;
-
 pitch -= e.movementY * 0.002;
 
-pitch = Math.max(
--Math.PI/2,
-Math.min(
-Math.PI/2,
-pitch
-)
-);
+pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
 
-camera.rotation.order =
-"YXZ";
-
+camera.rotation.order = "YXZ";
 camera.rotation.y = yaw;
 camera.rotation.x = pitch;
 
 }
 
+});
+
+// ---------- COLLISIONS ----------
+const collisionRaycaster = new THREE.Raycaster();
+const UP = new THREE.Vector3(0,1,0);
+
+// hauteurs (au-dessus des pieds) auxquelles on teste les murs.
+// Le premier rayon est juste au-dessus de STEP_HEIGHT : les marches
+// plus basses ne bloquent pas, on peut les monter.
+const RAY_HEIGHTS = [0.55, 1.0, 1.5];
+
+const groundRaycaster = new THREE.Raycaster();
+const DOWN = new THREE.Vector3(0,-1,0);
+
+// retourne la hauteur du sol sous le joueur, ou null s'il n'y en a pas
+function getGroundY(x, z, fy){
+
+groundRaycaster.set(
+new THREE.Vector3(x, fy + STEP_HEIGHT, z),
+DOWN
+);
+
+groundRaycaster.far = STEP_HEIGHT + 0.3;
+
+const hits = groundRaycaster.intersectObjects(groundMeshes, false);
+
+return hits.length > 0 ? hits[0].point.y : null;
+
 }
+
+// angles autour de la direction du mouvement (évite de passer dans les coins)
+const RAY_ANGLES = [0, 0.6, -0.6];
+
+// retourne true si un mur bloque le déplacement dans cette direction
+function isBlocked(x, z, dirX, dirZ, distance, fy){
+
+if(collisionMeshes.length === 0) return false;
+
+const baseDir = new THREE.Vector3(dirX,0,dirZ).normalize();
+
+collisionRaycaster.far = PLAYER_RADIUS + distance;
+
+for(const h of RAY_HEIGHTS){
+
+for(const angle of RAY_ANGLES){
+
+const dir = baseDir.clone().applyAxisAngle(UP, angle);
+
+collisionRaycaster.set(
+new THREE.Vector3(x, fy + h, z),
+dir
 );
-function checkCollision(x,z){
 
-for(const wall of walls){
+const hits = collisionRaycaster.intersectObjects(collisionMeshes, false);
 
-const playerBox =
-new THREE.Box3(
-new THREE.Vector3(
-x - PLAYER_RADIUS,
-0,
-z - PLAYER_RADIUS
-),
-new THREE.Vector3(
-x + PLAYER_RADIUS,
-2,
-z + PLAYER_RADIUS
-)
-);
-
-if(playerBox.intersectsBox(wall)){
-
+if(hits.length > 0){
 return true;
+}
 
 }
 
@@ -390,167 +387,152 @@ return true;
 return false;
 
 }
+
+// ---------- BOUCLE PRINCIPALE ----------
 function animate(){
 
-requestAnimationFrame(
-animate
-);
+requestAnimationFrame(animate);
 
-const speed =
-keys["shift"]
-? RUN_SPEED
-: WALK_SPEED;
-let nextX = camera.position.x;
-let nextZ = camera.position.z;
+const speed = keys["shift"] ? RUN_SPEED : WALK_SPEED;
 
-const direction =
-new THREE.Vector3();
+const direction = new THREE.Vector3();
 
-camera.getWorldDirection(
-direction
-);
+camera.getWorldDirection(direction);
 
 direction.y = 0;
 direction.normalize();
 
-const right =
-new THREE.Vector3();
+const right = new THREE.Vector3();
 
-right.crossVectors(
-direction,
-new THREE.Vector3(0,1,0)
-);
+right.crossVectors(direction, new THREE.Vector3(0,1,0));
+
+// déplacement voulu
+let moveX = 0;
+let moveZ = 0;
 
 if(keys["w"]){
-
-nextX += direction.x * speed;
-nextZ += direction.z * speed;
-
+moveX += direction.x * speed;
+moveZ += direction.z * speed;
 }
 
 if(keys["s"]){
-
-nextX -= direction.x * speed;
-nextZ -= direction.z * speed;
-
+moveX -= direction.x * speed;
+moveZ -= direction.z * speed;
 }
 
 if(keys["a"]){
-
-nextX -= right.x * speed;
-nextZ -= right.z * speed;
-
+moveX -= right.x * speed;
+moveZ -= right.z * speed;
 }
 
 if(keys["d"]){
-
-nextX += right.x * speed;
-nextZ += right.z * speed;
-
+moveX += right.x * speed;
+moveZ += right.z * speed;
 }
 
-if(!checkCollision(
-nextX,
-camera.position.z
-)){
+// axe X puis axe Z séparément : permet de glisser le long des murs
+if(moveX !== 0){
 
-camera.position.x = nextX;
-
-}
-
-if(!checkCollision(
+if(!isBlocked(
 camera.position.x,
-nextZ
+camera.position.z,
+Math.sign(moveX),
+0,
+Math.abs(moveX),
+feetY
 )){
-
-camera.position.z = nextZ;
+camera.position.x += moveX;
+}
 
 }
-const targetHeight =
-isCrouching
-? CROUCH_HEIGHT
-: STAND_HEIGHT;
 
-camera.position.y +=
-(targetHeight - camera.position.y)
-* 0.15;
+if(moveZ !== 0){
 
-const targetLean =
-leanDirection * LEAN_ANGLE;
+if(!isBlocked(
+camera.position.x,
+camera.position.z,
+0,
+Math.sign(moveZ),
+Math.abs(moveZ),
+feetY
+)){
+camera.position.z += moveZ;
+}
 
-camera.rotation.z +=
-(targetLean - camera.rotation.z)
-* 0.12;
+}
 
-raycaster.setFromCamera(
-centerScreen,
-camera
-);
+// sol sous les pieds : permet de monter les marches et de tomber
+const groundY = getGroundY(camera.position.x, camera.position.z, feetY);
 
-const intersects =
-raycaster.intersectObjects(
-interactables
-);
+if(groundY !== null){
+
+velY = 0;
+
+const diff = groundY - feetY;
+
+// montée/descente fluide (évite l'effet de saccade sur les marches)
+feetY = Math.abs(diff) < 0.01 ? groundY : feetY + diff * 0.35;
+
+}else{
+
+// plus de sol : on tombe
+velY -= GRAVITY;
+feetY += velY;
+
+if(feetY < 0){
+feetY = 0;
+velY = 0;
+}
+
+}
+
+// accroupi
+const targetHeight = isCrouching ? CROUCH_HEIGHT : STAND_HEIGHT;
+
+eyeOffset += (targetHeight - eyeOffset) * 0.15;
+
+camera.position.y = feetY + eyeOffset;
+
+// penché
+const targetLean = leanDirection * LEAN_ANGLE;
+
+camera.rotation.z += (targetLean - camera.rotation.z) * 0.12;
+
+// interaction (porte)
+raycaster.setFromCamera(centerScreen, camera);
+
+const intersects = raycaster.intersectObjects(interactables);
 
 lookingAtDoor = false;
 
-document
-.getElementById(
-"interactionText"
-)
-.style.display =
-"none";
+document.getElementById("interactionText").style.display = "none";
 
-if(
-intersects.length > 0
-){
-const hit =
-intersects[0].object;
+if(intersects.length > 0){
 
-if(
-hit.userData.type
-=== "door"
-){
+const hit = intersects[0].object;
+
+if(hit.userData.type === "door"){
+
 lookingAtDoor = true;
 
-document
-.getElementById(
-"interactionText"
-)
-.innerText =
-"[F] Ouvrir";
+document.getElementById("interactionText").innerText = "[F] Ouvrir";
+document.getElementById("interactionText").style.display = "block";
 
-document
-.getElementById(
-"interactionText"
-)
-.style.display =
-"block";
 }
+
 }
-door.rotation.y +=
-(
-targetDoorRotation
--
-door.rotation.y
-)
-* 0.08;
-renderer.render(
-scene,
-camera
-);
+
+door.rotation.y += (targetDoorRotation - door.rotation.y) * 0.08;
+
+renderer.render(scene, camera);
 
 }
 
 animate();
 
-window.addEventListener(
-"resize",
-()=>{
+window.addEventListener("resize",()=>{
 
-camera.aspect =
-window.innerWidth /
-window.innerHeight;
+camera.aspect = window.innerWidth / window.innerHeight;
 
 camera.updateProjectionMatrix();
 
@@ -559,8 +541,7 @@ window.innerWidth,
 window.innerHeight
 );
 
-}
-);
+});
 
 </script>
 
