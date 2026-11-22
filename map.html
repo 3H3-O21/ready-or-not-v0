@@ -159,6 +159,8 @@ floor.rotation.x =
 -Math.PI/2;
 
 scene.add(floor);
+let house = null;
+
 const loader =
 new GLTFLoader();
 
@@ -168,7 +170,7 @@ loader.load(
 
 function(gltf){
 
-const house =
+house =
 gltf.scene;
 
 house.position.set(
@@ -184,7 +186,7 @@ house.scale.set(
 );
 
 scene.add(house);
-
+console.log(house);
 console.log(
 "Maison GLB chargée"
 );
