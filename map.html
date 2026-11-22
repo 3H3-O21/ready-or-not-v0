@@ -69,6 +69,9 @@ Clique pour commencer
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js";
 
 const scene = new THREE.Scene();
+const raycaster = new THREE.Raycaster();
+const centerScreen =
+new THREE.Vector2(0,0);
 
 scene.background =
 new THREE.Color(0x555555);
@@ -132,6 +135,7 @@ color:0xbbbbbb
 });
 
 const walls = [];
+const interactables = [];
 function createWall(x,z,w,d){
 
 const wall =
@@ -147,6 +151,8 @@ z
 );
 
 scene.add(wall);
+
+interactables.push(wall);
 
 const box =
 new THREE.Box3().setFromObject(
@@ -389,6 +395,24 @@ leanDirection * LEAN_ANGLE;
 camera.rotation.z +=
 (targetLean - camera.rotation.z)
 * 0.12;
+
+raycaster.setFromCamera(
+centerScreen,
+camera
+);
+
+const intersects =
+raycaster.intersectObjects(
+interactables
+);
+
+if(
+intersects.length > 0
+){
+console.log(
+intersects[0].object
+);
+}
 
 renderer.render(
 scene,
