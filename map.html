@@ -361,19 +361,12 @@ camera.position.y +=
 (targetHeight - camera.position.y)
 * 0.15;
 
-camera.position.x +=
-(
-leanDirection * LEAN_AMOUNT
--
-(
-camera.position.x -
-Math.round(camera.position.x)
-)
-)
-* 0.05;
-
-camera.rotation.z =
+const targetLean =
 leanDirection * LEAN_ANGLE;
+
+camera.rotation.z +=
+(targetLean - camera.rotation.z)
+* 0.12;
 
 renderer.render(
 scene,
