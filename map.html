@@ -203,29 +203,8 @@ error
 }
 
 );
-
-const wallMaterial =
-new THREE.MeshStandardMaterial({
-color:0xbbbbbb
-});
-
 const walls = [];
 const interactables = [];
-function createWall(x,z,w,d){
-
-const wall =
-new THREE.Mesh(
-new THREE.BoxGeometry(w,4,d),
-wallMaterial
-);
-
-wall.position.set(
-x,
-2,
-z
-);
-
-scene.add(wall);
 
 interactables.push(wall);
 
@@ -238,11 +217,7 @@ walls.push(box);
 
 }
 
-createWall(-7,-15,14,1);
-createWall(7,-15,14,1);
-createWall(0,15,30,1);
-createWall(-15,0,1,30);
-createWall(15,0,1,30);
+
 const doorMaterial =
 new THREE.MeshStandardMaterial({
 color:0x663300
