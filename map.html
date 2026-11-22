@@ -51,6 +51,28 @@ canvas{
 
     z-index:1000;
 }
+#interactionText{
+    position:absolute;
+
+    left:50%;
+    top:58%;
+
+    transform:translateX(-50%);
+
+    color:white;
+
+    font-family:Arial;
+
+    font-size:20px;
+
+    text-shadow:0 0 5px black;
+
+    pointer-events:none;
+
+    z-index:1000;
+
+    display:none;
+}
 
 
 </style>
@@ -63,6 +85,7 @@ canvas{
 Clique pour commencer
 </div>
 <div id="crosshair"></div>
+<div id="interactionText"></div>
 
 <script type="module">
 
@@ -163,13 +186,45 @@ walls.push(box);
 
 }
 
-createWall(0,-15,30,1);
+createWall(-7,-15,14,1);
+createWall(7,-15,14,1);
 createWall(0,15,30,1);
 createWall(-15,0,1,30);
 createWall(15,0,1,30);
+const doorMaterial =
+new THREE.MeshStandardMaterial({
+color:0x663300
+});
+
+const door =
+new THREE.Mesh(
+new THREE.BoxGeometry(
+1,
+3,
+0.15
+),
+doorMaterial
+);
+
+door.position.set(
+0,
+1.5,
+-15
+);
+
+door.userData.type =
+"door";
+
+scene.add(door);
+
+interactables.push(door);
+
 
 const keys = {};
 const PLAYER_RADIUS = 0.5;
+let doorOpen = false;
+let targetDoorRotation = 0;
+let lookingAtDoor = false;
 
 document.addEventListener(
 "keydown",
@@ -177,7 +232,17 @@ document.addEventListener(
 const key = e.key.toLowerCase();
 
 keys[key] = true;
+if(
+key === "f" &&
+lookingAtDoor
+){
+doorOpen = !doorOpen;
 
+targetDoorRotation =
+doorOpen
+? -Math.PI/2
+: 0;
+}
 if(key === "control"){
 isCrouching = true;
 }
@@ -406,14 +471,49 @@ raycaster.intersectObjects(
 interactables
 );
 
+lookingAtDoor = false;
+
+document
+.getElementById(
+"interactionText"
+)
+.style.display =
+"none";
+
 if(
 intersects.length > 0
 ){
-console.log(
-intersects[0].object
-);
-}
+const hit =
+intersects[0].object;
 
+if(
+hit.userData.type
+=== "door"
+){
+lookingAtDoor = true;
+
+document
+.getElementById(
+"interactionText"
+)
+.innerText =
+"[F] Ouvrir";
+
+document
+.getElementById(
+"interactionText"
+)
+.style.display =
+"block";
+}
+}
+door.rotation.y +=
+(
+targetDoorRotation
+-
+door.rotation.y
+)
+* 0.08;
 renderer.render(
 scene,
 camera
