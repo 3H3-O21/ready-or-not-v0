@@ -90,6 +90,8 @@ Clique pour commencer
 <script type="module">
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js";
+import { GLTFLoader } from
+"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js";
 
 const scene = new THREE.Scene();
 const raycaster = new THREE.Raycaster();
@@ -151,6 +153,50 @@ floor.rotation.x =
 -Math.PI/2;
 
 scene.add(floor);
+const loader =
+new GLTFLoader();
+
+loader.load(
+
+"./models/maison test.glb",
+
+function(gltf){
+
+const house =
+gltf.scene;
+
+house.position.set(
+0,
+0,
+0
+);
+
+house.scale.set(
+1,
+1,
+1
+);
+
+scene.add(house);
+
+console.log(
+"Maison GLB chargée"
+);
+
+},
+
+undefined,
+
+function(error){
+
+console.error(
+"Erreur GLB :",
+error
+);
+
+}
+
+);
 
 const wallMaterial =
 new THREE.MeshStandardMaterial({
