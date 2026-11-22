@@ -32,6 +32,26 @@ canvas{
     font-size:30px;
     cursor:pointer;
 }
+#crosshair{
+    position:absolute;
+
+    width:6px;
+    height:6px;
+
+    background:white;
+    border-radius:50%;
+
+    top:50%;
+    left:50%;
+
+    transform:
+    translate(-50%,-50%);
+
+    pointer-events:none;
+
+    z-index:1000;
+}
+
 
 </style>
 
@@ -42,6 +62,7 @@ canvas{
 <div id="startScreen">
 Clique pour commencer
 </div>
+<div id="crosshair"></div>
 
 <script type="module">
 
