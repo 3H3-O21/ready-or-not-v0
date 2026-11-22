@@ -90,9 +90,6 @@ Clique pour commencer
 <script type="module">
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js";
-import { STLLoader }
-from
-"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/STLLoader.js";
 
 const scene = new THREE.Scene();
 const raycaster = new THREE.Raycaster();
@@ -154,58 +151,6 @@ floor.rotation.x =
 -Math.PI/2;
 
 scene.add(floor);
-const stlLoader =
-new STLLoader();
-
-stlLoader.load(
-"./models/maison test.stl",
-
-function(geometry){
-
-const material =
-new THREE.MeshStandardMaterial({
-color:0xffffff
-});
-
-const house =
-new THREE.Mesh(
-geometry,
-material
-);
-
-house.scale.set(
-0.05,
-0.05,
-0.05
-);
-
-house.rotation.x =
--Math.PI / 2;
-
-house.position.set(
-0,
-0,
-0
-);
-
-scene.add(house);
-
-console.log(
-"Maison chargée"
-);
-
-},
-
-undefined,
-
-function(error){
-
-console.error(
-error
-);
-
-}
-);
 
 const wallMaterial =
 new THREE.MeshStandardMaterial({
